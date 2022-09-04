@@ -103,8 +103,10 @@ public class SimulationContext {
 
     @Override
     public String toString() {
-        return simStat.toString() + "\n"
-                + getRequests().stream().map(RequestStat::toString).collect(Collectors.joining("\n"));
+        //we don't need all string
+        //return simStat.toString() + "\n"
+        //        + getRequests().stream().map(RequestStat::toString).collect(Collectors.joining("\n"));
+        return getRequests().stream().map(RequestStat::toString).collect(Collectors.joining("\n"));
     }
 
     public SimulationContext setMaxUsers(int maxUsers) {

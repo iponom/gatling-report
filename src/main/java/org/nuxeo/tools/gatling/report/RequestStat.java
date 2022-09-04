@@ -78,8 +78,8 @@ public class RequestStat {
     }
 
     public static String header() {
-        return "simulation\tscenario\tmaxUsers\trequest\tstart\tstartDate\tduration\tend\tcount\tsuccessCount\t"
-                + "errorCount\tmin\tp50\tp90\tp95\tp99\tmax\tavg\tstddev\trps\tapdex\trating";
+        return "simulation,scenario,maxUsers,request,start,startDate,duration,end,count,successCount,"
+                + "errorCount,min,p50,p90,p95,p99,max,avg,stddev,rps,apdex,rating";
     }
 
     public void add(long start, long end, boolean success) {
@@ -177,7 +177,7 @@ public class RequestStat {
     @Override
     public String toString() {
         return String.format(Locale.ENGLISH,
-                "%s\t%s\t%s\t%s\t%s\t%s\t%.2f\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%.2f\t%s\t%.2f\t%.2f\t%s",
+                "%s,%s,%s,%s,%s,%s,%.2f,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%.2f,%s,%.2f,%.2f,%s",
                 simulation, scenario, maxUsers, request, start, startDate, duration, end, count, successCount,
                 errorCount, min, p50, p90, p95, p99, max, avg, stddev, rps, apdex.getScore(), apdex.getRating());
     }

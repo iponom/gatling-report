@@ -18,8 +18,11 @@ package org.nuxeo.tools.gatling.report;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.apache.log4j.Logger;
 
@@ -50,13 +53,41 @@ public class App implements Runnable {
 
     @Override
     public void run() {
-        parseSimulationFiles();
-        render();
+        Path rootPath = parseSimulationFiles();
+        render(rootPath);
     }
 
-    protected void parseSimulationFiles() {
+    protected Path parseSimulationFiles() {
         stats = new ArrayList<>(options.simulations.size());
-        options.simulations.forEach(simulation -> parseSimulationFile(new File(simulation)));
+        if (options.simulations.size() == 1) {
+            Path rootPath = Paths.get(options.simulations.get(0));
+            if (Files.isDirectory(rootPath)) {
+                List<Path> simulations = new ArrayList<>();
+                try {
+                    String simulationFileName = "simulation.log";
+                    FileVisitor<Path> matcherVisitor = new SimpleFileVisitor<>() {
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attribs) {
+                            //System.out.println(file.getFileName().toString());
+                            if (simulationFileName.equals(file.getFileName().toString())) {
+                                simulations.add(file);
+                            }
+                            return FileVisitResult.CONTINUE;
+                        }
+                    };
+                    Files.walkFileTree(rootPath, matcherVisitor);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                simulations.forEach(simulation -> parseSimulationFile(simulation.toFile()));
+            } else {
+                parseSimulationFile(rootPath.toFile());
+            }
+            return rootPath;
+        } else {
+            options.simulations.forEach(simulation -> parseSimulationFile(new File(simulation)));
+            return Paths.get("./");
+        }
     }
 
     protected void parseSimulationFile(File file) {
@@ -72,9 +103,9 @@ public class App implements Runnable {
         }
     }
 
-    protected void render() {
+    protected void render(Path rootPath) {
         if (options.outputDirectory == null) {
-            renderAsCsv();
+            renderAsCsv(rootPath);
         } else {
             try {
                 renderAsReport();
@@ -93,20 +124,32 @@ public class App implements Runnable {
             }
             log.warn("Overriding existing report directory" + options.outputDirectory);
         }
-        String reportPath = new Report(stats).setOutputDirectory(dir)
-                                             .includeJs(options.includeJs)
-                                             .setTemplate(options.template)
-                                             .includeGraphite(options.graphiteUrl, options.user, options.password,
-                                                     options.getZoneId())
-                                             .yamlReport(options.yaml)
-                                             .withMap(options.map)
-                                             .setFilename(options.outputName)
-                                             .create();
+        String reportPath = new Report(stats)
+                .setOutputDirectory(dir)
+                .includeJs(options.includeJs)
+                .setTemplate(options.template)
+                .includeGraphite(options.graphiteUrl, options.user, options.password, options.getZoneId())
+                .yamlReport(options.yaml)
+                .withMap(options.map)
+                .setFilename(options.outputName)
+                .create();
         log.info("Report generated: " + reportPath);
     }
 
-    protected void renderAsCsv() {
-        System.out.println(RequestStat.header());
-        stats.forEach(System.out::println);
+    protected void renderAsCsv(Path rootPath) {
+        Path path = Path.of(rootPath.toAbsolutePath() + "/report.csv");
+        writeString(path, RequestStat.header(), StandardOpenOption.CREATE);
+        stats.forEach(line -> writeString(path, line.toString(), StandardOpenOption.APPEND));
+//      System.out.println(RequestStat.header());
+//      stats.forEach(System.out::println);
     }
+
+    private void writeString(Path path, String line, OpenOption openOption) {
+        try {
+            Files.writeString(path, line + "\n", openOption);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
